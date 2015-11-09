@@ -6,12 +6,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.SweepGradient;
 import android.util.AttributeSet;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
 
 import com.basic.gaugeprogress.R;
+
+import java.util.ArrayList;
 
 /**
  * 仪表盘进度条.
@@ -25,6 +26,9 @@ public class GaugeProgressBar extends View {
     private int mProgressTextColor;
     private int mProgressTextSize;
     private int mProgress;
+
+    private static final int TOTAL_PROGRESS = 100;
+    private static final int CIRCLE_ANGLE = 360;
 
 
     public GaugeProgressBar(Context context) {
@@ -69,12 +73,50 @@ public class GaugeProgressBar extends View {
         paint.setStrokeWidth(mProgressWidth);
 
         RectF oval = new RectF(left, top, right, buttom);
-        canvas.drawArc(oval, 135, 45, false, paint); //顺时针方向开始画，以3点钟方向作为起点.
+        canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画，以3点钟方向作为起点.
+        //计算长度
+
+        float sweepAngle = ((float)mProgress / TOTAL_PROGRESS) * CIRCLE_ANGLE;
+
+        if(sweepAngle < 90 && sweepAngle > 0){
+              paint.setColor(Color.GREEN);
+        } else {
+            ArrayList<Integer> list = new ArrayList<>();
+            if(sweepAngle <= 180){
+                list.add(Color.GREEN);
+                list.add(Color.YELLOW);
+            }  else {
+                list.add(Color.GREEN);
+                list.add(Color.YELLOW);
+                list.add(Color.RED);
+            }
+            int[] colors = new int[list.size()];
+            for (int i = 0; i< list.size();i++){
+                 colors[i] = list.get(i);
+            }
+            SweepGradient gradient = new SweepGradient(0, 0, colors, null);
+            paint.setShader(gradient);
+        }
+
+        canvas.drawArc(oval, 135, sweepAngle, false, paint);
     }
 
     private void initView() {
         mHeight = getHeight();
         mWidth = getWidth();
+    }
+
+    public void setProgress(int progress) {
+        if (progress < 0) {
+            return;
+        }
+        if (progress > TOTAL_PROGRESS) {
+            while (progress > TOTAL_PROGRESS) {
+                progress = progress % TOTAL_PROGRESS;
+            }
+        }
+
+        mProgress = progress;
     }
 
 }
