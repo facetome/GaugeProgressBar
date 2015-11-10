@@ -79,7 +79,7 @@ public class GaugeProgressBar extends View {
         float sweepAngle = ((float)mProgress / TOTAL_PROGRESS) * CIRCLE_ANGLE;
 
         if(sweepAngle < 90 && sweepAngle > 0){
-              paint.setColor(Color.GREEN);
+            paint.setColor(Color.GREEN);
         } else {
             ArrayList<Integer> list = new ArrayList<>();
             if(sweepAngle <= 180){
@@ -92,7 +92,7 @@ public class GaugeProgressBar extends View {
             }
             int[] colors = new int[list.size()];
             for (int i = 0; i< list.size();i++){
-                 colors[i] = list.get(i);
+                colors[i] = list.get(i);
             }
             SweepGradient gradient = new SweepGradient(0, 0, colors, null);
             paint.setShader(gradient);
@@ -101,9 +101,31 @@ public class GaugeProgressBar extends View {
         canvas.drawArc(oval, 135, sweepAngle, false, paint);
     }
 
+
     private void initView() {
         mHeight = getHeight();
         mWidth = getWidth();
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+      int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+      int heightMode = MeasureSpec.getMode
+                (heightMeasureSpec);
+        switch (widthMode){
+            case MeasureSpec.AT_MOST:
+                break;
+            case MeasureSpec.EXACTLY:
+                break;
+            case MeasureSpec.UNSPECIFIED:
+                break;
+            default:
+                break;
+    }
+
+        switch (heightMode) {
+
+        }
     }
 
     public void setProgress(int progress) {
@@ -118,5 +140,7 @@ public class GaugeProgressBar extends View {
 
         mProgress = progress;
     }
+
+
 
 }
