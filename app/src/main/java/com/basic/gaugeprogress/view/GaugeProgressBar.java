@@ -1,13 +1,18 @@
 package com.basic.gaugeprogress.view;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.SweepGradient;
+import android.graphics.drawable.GradientDrawable;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.view.View;
 
 import com.basic.gaugeprogress.R;
@@ -26,27 +31,29 @@ public class GaugeProgressBar extends View {
     private int mProgressTextColor;
     private int mProgressTextSize;
     private int mProgress;
+    private float mOriginX;
+    private float mOriginY;
 
     private static final int TOTAL_PROGRESS = 100;
-    private static final int CIRCLE_ANGLE = 360;
+    private static final int CIRCLE_ANGLE = 270;
 
 
     public GaugeProgressBar(Context context) {
-        super(context);
+        this(context, null);
     }
 
     public GaugeProgressBar(Context context, AttributeSet attrs) {
-        super(context, attrs);
+        this(context, attrs, 0);
     }
 
     public GaugeProgressBar(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         TypedArray attrType = context.obtainStyledAttributes(attrs, R.styleable
                 .custom_progress_attrs);
-        mProgressWidth = attrType.getInt(R.attr.progress_width, 15);
-        mProgressColor = attrType.getColor(R.attr.progress_color, Color.BLUE);
-        mProgressTextColor = attrType.getColor(R.attr.progress_text_color, Color.WHITE);
-        mProgressTextSize = attrType.getInt(R.attr.pregress_text_size, 20);//这里应该是sp，将其转换为px
+        mProgressWidth = attrType.getInt(1, 15);
+        mProgressColor = attrType.getColor(2, Color.BLUE);
+        mProgressTextColor = attrType.getColor(3, Color.WHITE);
+        mProgressTextSize = attrType.getInt(4, 20);//这里应该是sp，将其转换为px
         attrType.recycle();
     }
 
@@ -62,41 +69,29 @@ public class GaugeProgressBar extends View {
         int temp = Math.min(mWidth, mHeight);
         int paddingTop = Math.abs((mHeight - temp) / 2);
         int paddingLeft = Math.abs((mWidth - temp) / 2);
-        float top = 0 + paddingTop;
-        float buttom = top + temp;
-        float left = 0 + paddingLeft;
-        float right = left + paddingLeft;
+        float top = 0 + paddingTop + mProgressWidth;
+        float bottom = top + temp;
+        float left = 0 + paddingLeft + mProgressWidth;
+        float right = left + temp - 2 * mProgressWidth;
+        //求去圆心
+        mOriginX = (left + right) / 2;
+        mOriginY = (bottom + top) / 2;
 
         Paint paint = new Paint();
         paint.setColor(mProgressColor);
         paint.setAntiAlias(true);
+        paint.setStyle(Style.STROKE);
         paint.setStrokeWidth(mProgressWidth);
 
-        RectF oval = new RectF(left, top, right, buttom);
-        canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画，以3点钟方向作为起点.
+        RectF oval = new RectF(left, top, right, bottom);
+        canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画弧线，画环必须要加上 paint.setStyle(Style
+        // .STROKE);
         //计算长度
 
-        float sweepAngle = ((float)mProgress / TOTAL_PROGRESS) * CIRCLE_ANGLE;
-
-        if(sweepAngle < 90 && sweepAngle > 0){
-            paint.setColor(Color.GREEN);
-        } else {
-            ArrayList<Integer> list = new ArrayList<>();
-            if(sweepAngle <= 180){
-                list.add(Color.GREEN);
-                list.add(Color.YELLOW);
-            }  else {
-                list.add(Color.GREEN);
-                list.add(Color.YELLOW);
-                list.add(Color.RED);
-            }
-            int[] colors = new int[list.size()];
-            for (int i = 0; i< list.size();i++){
-                colors[i] = list.get(i);
-            }
-            SweepGradient gradient = new SweepGradient(0, 0, colors, null);
-            paint.setShader(gradient);
-        }
+        float sweepAngle = ((float) mProgress / TOTAL_PROGRESS) * CIRCLE_ANGLE;
+        int[] colors = {Color.RED, Color.GREEN, Color.YELLOW, Color.RED};
+        SweepGradient gradient = new SweepGradient(mOriginX, mOriginY, colors, null);
+        paint.setShader(gradient);
 
         canvas.drawArc(oval, 135, sweepAngle, false, paint);
     }
@@ -109,23 +104,30 @@ public class GaugeProgressBar extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-      int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-      int heightMode = MeasureSpec.getMode
-                (heightMeasureSpec);
-        switch (widthMode){
+        int widthMeasure = measureSize(widthMeasureSpec);
+        int heightMeasure = measureSize(heightMeasureSpec);
+        setMeasuredDimension(widthMeasure, heightMeasure);
+    }
+
+    private int measureSize(int measureSpec) {
+        int mode = MeasureSpec.getMode(measureSpec);
+        int size = MeasureSpec.getSize(measureSpec);
+        int result = getScreenWidth() / 2;
+        switch (mode) {
             case MeasureSpec.AT_MOST:
+                if (result >= size) {
+                    result = size;
+                }
                 break;
             case MeasureSpec.EXACTLY:
+                result = size;
                 break;
             case MeasureSpec.UNSPECIFIED:
                 break;
             default:
                 break;
-    }
-
-        switch (heightMode) {
-
         }
+        return result;
     }
 
     public void setProgress(int progress) {
@@ -139,8 +141,14 @@ public class GaugeProgressBar extends View {
         }
 
         mProgress = progress;
+        invalidate();
     }
 
+    private int getScreenWidth() {
+        DisplayMetrics metrics = new DisplayMetrics();
+        ((Activity) getContext()).getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        return metrics.widthPixels;
+    }
 
 
 }
