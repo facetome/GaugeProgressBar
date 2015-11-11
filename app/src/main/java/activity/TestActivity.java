@@ -20,7 +20,7 @@ public class TestActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            bar.setProgress(100);
+            bar.setProgress(msg.arg1);
         }
     };
 
@@ -32,26 +32,25 @@ public class TestActivity extends Activity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (true) {
+            //    while (true) {
                     try {
                         Log.d("wangliansen", "---------------------" + progress);
-                        Thread.sleep(500);
-                        if (progress <= 0) {
-                            progress += 20;
-                        } else if(progress < 100){
-                            progress += 2;
-                        }  else if (progress >= 100) {
-                            progress -= 100;
-                        }
+
+                        progress = 50;
                         Message message = mHandler.obtainMessage();
                         message.arg1 = progress;
                         mHandler.sendMessage(message);
+                         Thread.sleep(5000);
+                        progress = 10;
+                        Message message1 = mHandler.obtainMessage();
+                        message1.arg1 = progress;
+                        mHandler.sendMessage(message1);
 
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-            }
+  //          }
 
         }).start();
 

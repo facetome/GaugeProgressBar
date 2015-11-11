@@ -11,6 +11,7 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.SweepGradient;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.View;
@@ -18,6 +19,7 @@ import android.view.View;
 import com.basic.gaugeprogress.R;
 
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * 仪表盘进度条.
@@ -33,6 +35,11 @@ public class GaugeProgressBar extends View {
     private int mProgress;
     private float mOriginX;
     private float mOriginY;
+    private int mOlderProgress = 0;
+    private boolean mIsRepeat = false;
+    private int progressState = 0;
+    private int mOriginProgress = 0;
+    private int mCount=0;
 
     private static final int TOTAL_PROGRESS = 100;
     private static final int CIRCLE_ANGLE = 270;
@@ -87,13 +94,31 @@ public class GaugeProgressBar extends View {
         canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画弧线，画环必须要加上 paint.setStyle(Style
         // .STROKE);
         //计算长度
-
+        mOlderProgress = mProgress;
         float sweepAngle = ((float) mProgress / TOTAL_PROGRESS) * CIRCLE_ANGLE;
         int[] colors = {Color.RED, Color.GREEN, Color.YELLOW, Color.RED};
         SweepGradient gradient = new SweepGradient(mOriginX, mOriginY, colors, null);
         paint.setShader(gradient);
 
         canvas.drawArc(oval, 135, sweepAngle, false, paint);
+        if (mIsRepeat) {
+            if (progressState == 1) {
+                mProgress = mProgress + 1;
+                if (mProgress <= mOriginProgress) {
+                    invalidate();
+                }  else {
+                    mIsRepeat =false;
+                }
+            } else {
+                mProgress = mProgress - 4;
+                if (mProgress >= mOriginProgress) {
+                    invalidate();
+                }else {
+                    mIsRepeat = false;
+                }
+            }
+
+        }
     }
 
 
@@ -130,7 +155,10 @@ public class GaugeProgressBar extends View {
         return result;
     }
 
-    public void setProgress(int progress) {
+    public synchronized void setProgress(int progress) {
+        if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
+            throw new IllegalStateException("set progress must be called in UI thread");
+        }
         if (progress < 0) {
             return;
         }
@@ -139,8 +167,21 @@ public class GaugeProgressBar extends View {
                 progress = progress % TOTAL_PROGRESS;
             }
         }
-
-        mProgress = progress;
+        mOriginProgress = progress;
+        int duration = Math.abs(progress - mOlderProgress);
+        if (duration <= 2) {
+            mProgress = progress;
+            mIsRepeat = false;
+        } else {
+            mIsRepeat = true;
+            if (progress > mOlderProgress) {//进度条加
+                mProgress = mOlderProgress + 1;
+                progressState = 1;
+            } else {   //进度条减
+                mProgress = mOlderProgress - 4;
+                progressState = 2;
+            }
+        }
         invalidate();
     }
 
