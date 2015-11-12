@@ -14,6 +14,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 
 import com.basic.gaugeprogress.R;
@@ -33,14 +34,13 @@ public class GaugeProgressBar extends View {
     private int mProgressColor;
     private int mProgressTextColor;
     private int mProgressTextSize;
-    private int mProgress;
+    private float mProgress;
     private float mOriginX;
     private float mOriginY;
-    private int mOlderProgress = 0;
+    private float mOlderProgress = 0;
     private boolean mIsRepeat = false;
-    private int progressState = 0;
-    private int mOriginProgress = 0;
-    private CountDownLatch mDownLatch = new CountDownLatch(1);
+    private float mOriginProgress = 0;
+    private float mDuration = 0;
 
     private static final int TOTAL_PROGRESS = 100;
     private static final int CIRCLE_ANGLE = 270;
@@ -99,8 +99,7 @@ public class GaugeProgressBar extends View {
         canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画弧线，画环必须要加上 paint.setStyle(Style
         // .STROKE);
         //计算长度
-        mOlderProgress = mProgress;
-        float sweepAngle = ((float) mProgress / TOTAL_PROGRESS) * CIRCLE_ANGLE;
+        float sweepAngle = mProgress / TOTAL_PROGRESS * CIRCLE_ANGLE;
         int[] colors = {Color.RED, Color.GREEN, Color.YELLOW, Color.RED};
         SweepGradient gradient = new SweepGradient(mOriginX, mOriginY, colors, null);
         paint.setShader(gradient);
@@ -108,24 +107,44 @@ public class GaugeProgressBar extends View {
     }
 
     private void invalidateView() {
-        if (mIsRepeat) {
-            if (progressState == 1) {
-                mProgress = mProgress + 2;
-                if (mProgress <= mOriginProgress) {
-                    invalidate();
-                } else {
+        if (mProgressList != null && mProgressList.size() > 0) {
+            mOriginProgress = mProgressList.get(0);
+            //比较上一次setProgress的值和此次设置的值的大小
+            float duration = Math.abs(mOriginProgress - mOlderProgress);
+            if (duration > 0) {
+                if (duration <= 2) {//此时情况下进行平稳的加减
+                    mProgress = mProgressList.get(0);
+                    mOlderProgress = mProgress;
                     mIsRepeat = false;
-                }
-            } else {
-                mProgress = mProgress - 4;
-                if (mProgress >= mOriginProgress) {
-                    invalidate();
+                    mProgressList.remove(0);
                 } else {
-                    mIsRepeat = false;
-                    mDownLatch.countDown();
+                    mIsRepeat = true;
+                    if (mOriginProgress >= mOlderProgress) { //此时表示为大范围内的进度增加
+                        mDuration  = 2  ;
+                    } else {  //此时表示为大范围内的进度减小
+                        mDuration = -5 ;
+                    }
                 }
             }
 
+            if (mIsRepeat) {
+                mProgress = mProgress + mDuration;
+                Log.d("wangliangsen", "mProgress >>>>>>>>>>>>" + mProgress);
+                if (mDuration > 0) {
+                    if (mProgress >= mOriginProgress) {
+                        mOlderProgress = mProgress;
+                        mProgressList.remove(0);
+                        mIsRepeat = false;
+                    }
+                } else {
+                    if (mProgress <= mOriginProgress) {
+                        mOlderProgress = mProgress;
+                        mProgressList.remove(0);
+                        mIsRepeat = false;
+                    }
+                }
+            }
+            invalidate();
         }
     }
 
@@ -163,6 +182,12 @@ public class GaugeProgressBar extends View {
         return result;
     }
 
+    /**
+     * 进度条设置进度参数
+     * @progress must not lg 100， if the progress lg the 100,the view will repate draw the
+     * progress form 0 to 100.
+     * @param progress progress
+     */
     public synchronized void setProgress(int progress) {
         if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
             throw new IllegalStateException("set progress must be called in UI thread");
@@ -178,23 +203,7 @@ public class GaugeProgressBar extends View {
         if (mProgressList == null) {
             mProgressList = new ArrayList<>();
         }
-        mProgressList.add(progress);
-
-        mOriginProgress = progress;
-        int duration = Math.abs(progress - mOlderProgress);
-        if (duration <= 2) {
-            mProgress = progress;
-            mIsRepeat = false;
-        } else {
-            mIsRepeat = true;
-            if (progress > mOlderProgress) {//进度条加
-                mProgress = mOlderProgress + 2;
-                progressState = 1;
-            } else {   //进度条减
-                mProgress = mOlderProgress - 4;
-                progressState = 2;
-            }
-        }
+        mProgressList.add(new Integer(progress));
         invalidate(); //调用刷新ondraw并不是立即执行，而是要过一段时间后，所以这将是一个异步刷新的过程
     }
 
