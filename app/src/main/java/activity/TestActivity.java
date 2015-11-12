@@ -36,11 +36,11 @@ public class TestActivity extends Activity {
                     try {
                         Log.d("wangliansen", "---------------------" + progress);
 
-                        progress = 50;
+                        progress = 100;
                         Message message = mHandler.obtainMessage();
                         message.arg1 = progress;
                         mHandler.sendMessage(message);
-                         Thread.sleep(5000);
+                         Thread.sleep(500);
                         progress = 10;
                         Message message1 = mHandler.obtainMessage();
                         message1.arg1 = progress;

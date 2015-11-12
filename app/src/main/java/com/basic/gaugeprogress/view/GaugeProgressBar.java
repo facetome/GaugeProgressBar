@@ -19,6 +19,7 @@ import android.view.View;
 import com.basic.gaugeprogress.R;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -39,10 +40,11 @@ public class GaugeProgressBar extends View {
     private boolean mIsRepeat = false;
     private int progressState = 0;
     private int mOriginProgress = 0;
-    private int mCount=0;
+    private CountDownLatch mDownLatch = new CountDownLatch(1);
 
     private static final int TOTAL_PROGRESS = 100;
     private static final int CIRCLE_ANGLE = 270;
+    private List<Integer> mProgressList;
 
 
     public GaugeProgressBar(Context context) {
@@ -72,7 +74,11 @@ public class GaugeProgressBar extends View {
             initView();
             mIsInit = true;
         }
+        drawCanvas(canvas);
+        invalidateView();
+    }
 
+    private void drawCanvas(Canvas canvas) {
         int temp = Math.min(mWidth, mHeight);
         int paddingTop = Math.abs((mHeight - temp) / 2);
         int paddingLeft = Math.abs((mWidth - temp) / 2);
@@ -84,13 +90,12 @@ public class GaugeProgressBar extends View {
         mOriginX = (left + right) / 2;
         mOriginY = (bottom + top) / 2;
 
+        RectF oval = new RectF(left, top, right, bottom);
         Paint paint = new Paint();
         paint.setColor(mProgressColor);
         paint.setAntiAlias(true);
         paint.setStyle(Style.STROKE);
         paint.setStrokeWidth(mProgressWidth);
-
-        RectF oval = new RectF(left, top, right, bottom);
         canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画弧线，画环必须要加上 paint.setStyle(Style
         // .STROKE);
         //计算长度
@@ -99,22 +104,25 @@ public class GaugeProgressBar extends View {
         int[] colors = {Color.RED, Color.GREEN, Color.YELLOW, Color.RED};
         SweepGradient gradient = new SweepGradient(mOriginX, mOriginY, colors, null);
         paint.setShader(gradient);
-
         canvas.drawArc(oval, 135, sweepAngle, false, paint);
+    }
+
+    private void invalidateView() {
         if (mIsRepeat) {
             if (progressState == 1) {
-                mProgress = mProgress + 1;
+                mProgress = mProgress + 2;
                 if (mProgress <= mOriginProgress) {
                     invalidate();
-                }  else {
-                    mIsRepeat =false;
+                } else {
+                    mIsRepeat = false;
                 }
             } else {
                 mProgress = mProgress - 4;
                 if (mProgress >= mOriginProgress) {
                     invalidate();
-                }else {
+                } else {
                     mIsRepeat = false;
+                    mDownLatch.countDown();
                 }
             }
 
@@ -167,6 +175,11 @@ public class GaugeProgressBar extends View {
                 progress = progress % TOTAL_PROGRESS;
             }
         }
+        if (mProgressList == null) {
+            mProgressList = new ArrayList<>();
+        }
+        mProgressList.add(progress);
+
         mOriginProgress = progress;
         int duration = Math.abs(progress - mOlderProgress);
         if (duration <= 2) {
@@ -175,14 +188,14 @@ public class GaugeProgressBar extends View {
         } else {
             mIsRepeat = true;
             if (progress > mOlderProgress) {//进度条加
-                mProgress = mOlderProgress + 1;
+                mProgress = mOlderProgress + 2;
                 progressState = 1;
             } else {   //进度条减
                 mProgress = mOlderProgress - 4;
                 progressState = 2;
             }
         }
-        invalidate();
+        invalidate(); //调用刷新ondraw并不是立即执行，而是要过一段时间后，所以这将是一个异步刷新的过程
     }
 
     private int getScreenWidth() {
