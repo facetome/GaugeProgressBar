@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Paint.Cap;
 import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.SweepGradient;
@@ -95,6 +96,7 @@ public class GaugeProgressBar extends View {
         paint.setColor(mProgressColor);
         paint.setAntiAlias(true);
         paint.setStyle(Style.STROKE);
+        paint.setStrokeCap(Cap.ROUND);
         paint.setStrokeWidth(mProgressWidth);
         canvas.drawArc(oval, 135, 270, false, paint); //顺时针方向开始画弧线，画环必须要加上 paint.setStyle(Style
         // .STROKE);
@@ -120,7 +122,7 @@ public class GaugeProgressBar extends View {
                 } else {
                     mIsRepeat = true;
                     if (mOriginProgress >= mOlderProgress) { //此时表示为大范围内的进度增加
-                        mDuration  = 2  ;
+                        mDuration  = 5  ;
                     } else {  //此时表示为大范围内的进度减小
                         mDuration = -5 ;
                     }
@@ -143,8 +145,9 @@ public class GaugeProgressBar extends View {
                         mIsRepeat = false;
                     }
                 }
+                invalidate();
             }
-            invalidate();
+
         }
     }
 
@@ -184,8 +187,8 @@ public class GaugeProgressBar extends View {
 
     /**
      * 进度条设置进度参数
-     * @progress must not lg 100， if the progress lg the 100,the view will repate draw the
-     * progress form 0 to 100.
+     * @progress must not lg 100， if the progress lg the 100,the view will  draw the
+     * progress repatly from 0 to 100.
      * @param progress progress
      */
     public synchronized void setProgress(int progress) {
@@ -196,15 +199,20 @@ public class GaugeProgressBar extends View {
             return;
         }
         if (progress > TOTAL_PROGRESS) {
-            while (progress > TOTAL_PROGRESS) {
+        while (progress > TOTAL_PROGRESS ) {
+            if(progress % TOTAL_PROGRESS == 0){
+                progress = 100;
+            }else {
                 progress = progress % TOTAL_PROGRESS;
             }
+
         }
-        if (mProgressList == null) {
-            mProgressList = new ArrayList<>();
-        }
-        mProgressList.add(new Integer(progress));
-        invalidate(); //调用刷新ondraw并不是立即执行，而是要过一段时间后，所以这将是一个异步刷新的过程
+    }
+    if (mProgressList == null) {
+        mProgressList = new ArrayList<>();
+    }
+    mProgressList.add(new Integer(progress));
+    invalidate(); //调用刷新ondraw并不是立即执行，而是要过一段时间后，所以这将是一个异步刷新的过程
     }
 
     private int getScreenWidth() {
